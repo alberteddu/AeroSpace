@@ -21,6 +21,12 @@ jobs:
       - name: Install deps
         run: |
           brew install xcodegen gsed asciidoctor
+      - name: Update .local.xcconfig
+        run: |
+          cat <<EOF > .local.xcconfig
+          DEVELOPMENT_TEAM =
+          CODE_SIGN_IDENTITY = -
+          EOF
       - name: Build
         run: |
           ./build-debug.sh
