@@ -24,6 +24,10 @@ targets:
     platform: macOS
     deploymentTarget: "13.0"
     sources: [src/, docs/config-examples/default-config.toml]
+    scheme:
+      testTargets:
+        - AeroSpace-Tests
+      gatherCoverageData: true
     configFiles:
       Release: .local.xcconfig
       Debug: .local.xcconfig
@@ -62,10 +66,6 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources: [test/]
-    scheme:
-      testTargets:
-        - AeroSpace-Tests
-      gatherCoverageData: true
     dependencies:
       - target: AeroSpace
       - package: Nimble
