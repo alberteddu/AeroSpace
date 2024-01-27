@@ -27,6 +27,11 @@ struct WorkspaceCommand : Command {
         }
         check(workspace.monitor.setActiveWorkspace(workspace))
         focusedWorkspaceName = workspace.name
+        
+        let name = NSNotification.Name("bobko.aerospace.WorkspaceFocus")
+        let userInfo = ["workspace": focusedWorkspaceName]
+        DistributedNotificationCenter.default().postNotificationName(name, object: nil, userInfo: userInfo, deliverImmediately: true)
+        
         return true
     }
 

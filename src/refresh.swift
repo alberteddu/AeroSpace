@@ -32,6 +32,57 @@ func refreshSession<T>(startup: Bool = false, forceFocus: Bool = false, body: ()
         updateTrayText()
         layoutWorkspaces()
     }
+    
+    let notificationName = NSNotification.Name("bobko.aerospace.Layout")
+    // Create an empty dictionary to store workspace information
+    var workspacesInfo: [String: Any] = [:]
+
+    // Iterate through all workspaces
+    for workspace in Workspace.all {
+        // Create an empty array to store window information for the current workspace
+        var windowsInfo: [[String: Any]] = []
+
+        // Iterate through all windows in the current workspace
+        for window in workspace.allLeafWindowsRecursive {
+    
+            if (window.app.id == nil) {
+                continue;
+            }
+            
+            // Create a dictionary for each window
+            let windowInfo: [String: Any] = [
+                "id": window.app.id as Any
+                // Add more window information if needed
+            ]
+
+            // Append the window information to the array
+            windowsInfo.append(windowInfo)
+        }
+
+        // Create a dictionary for the current workspace
+        let workspaceInfo: [String: Any] = [
+            "windows": windowsInfo,
+            "screen": workspace.monitor.name,
+            // Add more workspace information if needed
+        ]
+
+        // Add the workspace information to the main dictionary using the workspace name as the key
+        workspacesInfo[workspace.name] = workspaceInfo
+    }
+    
+    // Check if the overall information has changed since the last notification
+    let lastUserInfo = UserDefaults.standard.dictionary(forKey: "lastUserInfo")
+    if (lastUserInfo == nil) || workspacesInfo as NSDictionary != lastUserInfo! as NSDictionary {
+        // Construct the final userInfo dictionary
+        let userInfo: [AnyHashable: Any] = ["workspaces": workspacesInfo]
+
+        // Post the notification with the userInfo dictionary
+        DistributedNotificationCenter.default().postNotificationName(notificationName, object: nil, userInfo: userInfo, deliverImmediately: true)
+
+        // Update the lastUserInfo in UserDefaults
+        UserDefaults.standard.set(workspacesInfo, forKey: "lastUserInfo")
+    }
+
     return result
 }
 

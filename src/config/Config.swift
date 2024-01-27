@@ -147,6 +147,99 @@ struct Mode: Copyable {
     var name: String?
     var bindings: [String: HotkeyBinding]
 
+    static let zero = Mode(name: nil, bindings: [])
+
+    func deactivate() {
+        let notificationName = NSNotification.Name("bobko.aerospace.ModeDeactivate")
+        let userInfo = ["mode": name]
+        DistributedNotificationCenter.default().postNotificationName(notificationName, object: nil, userInfo: userInfo as [AnyHashable : Any], deliverImmediately: true)
+
+        for binding in bindings {
+            binding.deactivate()
+        }
+    }
+}
+
+extension NSEvent.ModifierFlags {
+    public var description: String {
+        let dictionary: [String: Bool] = [
+            "capsLock": self.contains(.capsLock),
+            "shift": self.contains(.shift),
+            "control": self.contains(.control),
+            "option": self.contains(.option),
+            "command": self.contains(.command),
+            "numericPad": self.contains(.numericPad),
+            "help": self.contains(.help),
+            "function": self.contains(.function)
+        ]
+
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: dictionary, options: .prettyPrinted)
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                return jsonString
+            }
+        } catch {
+            return "Error generating JSON"
+        }
+
+        return "{}"
+    }
+}
+
+func helpStringsToJSON(commands: [any Command]) -> String? {
+    let jsonEncoder = JSONEncoder()
+    jsonEncoder.outputFormatting = .prettyPrinted
+
+    // Extract help strings from each command
+    let helpStrings = commands.map { command -> String in
+        return command.info.kind.rawValue;
+    }
+
+    do {
+        // Convert the array of help strings to JSON data
+        let jsonData = try jsonEncoder.encode(helpStrings)
+        // Convert JSON data to a string
+        if let jsonString = String(data: jsonData, encoding: .utf8) {
+            return jsonString
+        }
+    } catch {
+        print("Error encoding JSON: \(error)")
+    }
+
+    return nil
+}
+
+class HotkeyBinding {
+    let modifiers: NSEvent.ModifierFlags
+    let key: Key
+    let commands: [any Command]
+    private var hotKey: HotKey? = nil
+
+    init(_ modifiers: NSEvent.ModifierFlags, _ key: Key, _ commands: [any Command]) {
+        self.modifiers = modifiers
+        self.key = key
+        self.commands = commands
+    }
+
+    func activate() {
+        let notificationName = NSNotification.Name("bobko.aerospace.BindingActivate")
+        let userInfo = ["modifiers": modifiers.description, "key": key.description, "commands": helpStringsToJSON(commands: commands) as Any] as [String : Any]
+        DistributedNotificationCenter.default().postNotificationName(notificationName, object: nil, userInfo: userInfo as [AnyHashable : Any], deliverImmediately: true)
+
+        hotKey = HotKey(key: key, modifiers: modifiers, keyUpHandler: { [commands] in
+            refreshSession(forceFocus: true) {
+                _ = commands.run(.focused)
+            }
+        })
+    }
+
+    func deactivate() {
+        let notificationName = NSNotification.Name("bobko.aerospace.BindingDeactivate")
+        let userInfo = ["modifiers": modifiers.description, "key": key.description, "commands": helpStringsToJSON(commands: commands) as Any] as [String : Any]
+        DistributedNotificationCenter.default().postNotificationName(notificationName, object: nil, userInfo: userInfo as [AnyHashable : Any], deliverImmediately: true)
+
+        hotKey = nil
+    }
     static let zero = Mode(name: nil, bindings: [:])
 }
 
